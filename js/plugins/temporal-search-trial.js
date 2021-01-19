@@ -178,15 +178,27 @@ jsPsych.plugins["temporal-search"] = (function() {
     var search_item = $('<div />').addClass('line')
 
     var mask = [];
-    for (let i=0; i<6; i++) {
-      let line = $('<div />').addClass('line').css('transform', `rotate(${i*30}deg)`)
+    for (let i=0; i<4; i++) {
+      let line = $('<div />').addClass('line').css('transform', `rotate(${i*45}deg)`)
       mask.push(line)
     }
 
-    var example = $('<div />').addClass('line').css('transform', `rotate(${trial_data.target_tilt}deg)`)
+    var preview = $('<div />').addClass('line').css('transform', `rotate(${trial_data.target_tilt}deg)`)
 
-    //$(example).prepend(`TARGET`)
-    $(container).append(example)
+    //$(preview).prepend(`TARGET`)
+    $(container).append(preview)
+
+    let pos = $(container).offset()
+    let margin = 30;
+
+    let label = $('<div />').text('TARGET').css({
+      'position': 'fixed',
+      'top': `${pos.top - margin}px`,
+      'left': `${pos.left}px`
+    })
+
+    $(display_element).append(label)
+
 
     var keyboardListener;
 

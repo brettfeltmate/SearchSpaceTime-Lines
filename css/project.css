@@ -13,19 +13,21 @@ body {
 
 .container {
   position: relative;
+  display: grid;
   width: 80px;
   height: 80px;
 }
 
 .line {
+  place-self: center;
   position: absolute;
   width: 80px;
-  border: 5px solid white;
-  background-color: white;
+  border: 2px solid white;
   opacity: 1;
 }
 
 .fixation {
+  display: grid;
   grid-area: fixation;
   position: relative;
   width: 80px;

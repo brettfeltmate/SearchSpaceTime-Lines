@@ -113,78 +113,68 @@ jsPsych.plugins["spatial-search"] = (function() {
   }
 
   plugin.generate_arrays = function() {
-    // Initial display consists only of fixation stimulus
-    let fixation = $('<div />').addClass('fixation');
+    // Spawn arrays to be populated & returned
+    let fix_array = $('<div />').addClass('spatial_array').attr('id', 'fixation')
+    let mask_array = $('<div />').addClass('spatial_array').attr('id', 'mask')
+    let search_array  = $('<div />').addClass('spatial_array').attr('id', 'search')
 
+    // Generate fixation stimulus
+    let fixation = $('<div />').addClass('fixation') // Fixation container
+    let spokes = [] // Fixation stim a collection of lines w/ varying tilts
 
-    let spokes = []
-    for (let i=0; i<6; i++) {
-      let spoke = $('<div />').addClass('line').css('transform', `rotate(${i*30}deg)`)
+    for (let i=0; i<4; i++) {
+      let spoke = $('<div />').addClass('line').css('transform', `rotate(${i * 45}deg)`)
       spokes.push(spoke)
     }
-    pr(spokes, 'spokes')
+
     $(fixation).append(spokes)
-    pr(fixation)
+    $(fix_array).append(fixation)
 
-    stim_arrays.fixation = $('<div />').addClass('spatial_array').append(fixation)
+    stim_arrays.fixation = fix_array
 
-    let mask_array = $('<div />').addClass('spatial_array')
-    let search_array = $('<div />').addClass('spatial_array')
 
-    // array_stims initially populated w/ fixation stim. Later appended to to reach 25 items
-    let mask_array_stims = [fixation]
-    let search_array_stims = [fixation];
+    // Generate masking stimuli to be appended to mask_array
+    let masks = []
 
-    // Remaining spots in mask array filled w/ cells of random colours
-    while (mask_array_stims.length < 25) {
+    while(masks.length < 25) {
       let mask = $('<div />').addClass('container')
-      $(mask).append(spokes)
-      mask_array_stims.push(mask)
-    }
-    // add to array
-    mask_array.append(mask_array_stims)
-
-    // store
-    stim_arrays.mask = mask_array;
-
-
-    /*
-    * Create search array
-    * */
-
-    // spawn target if desired
-    if (trial_data.target_present == 'PRESENT') {
-      let stim_container = $('<div />').addClass('container')
-      let stim = $('<div />').addClass('line').css('transform', `rotate(${trial_data.target_tilt}deg);`)
-
-      stim_container.append(stim)
-
-      search_array_stims.push(stim_container)
-    }
-
-    // Now finish populating stim array
-    while (search_array_stims.length < 25) {
-      let stim_container = $('<div />').addClass('container')
-      // until set size reached, spawn distractors
-      if (search_array_stims.length < trial_data.set_size) {
-        // Randomly select distractor fill
-        let tilt = randomChoice(trial_data.distractor_tilts)
-        let stim = $('<div />').addClass('line').css('transform', `rotate(${tilt}deg);`)
-
-        stim_container.append(stim)
+      let these_spokes = []
+      for (let i=0; i<6; i++) {
+        let this_spoke = $('<div />').addClass('line').css('transform', `rotate(${i * 30}deg)`)
+        these_spokes.push(this_spoke)
       }
-      search_array_stims.push(stim_container)
+      $(mask).append(these_spokes)
+      masks.push(mask)
 
     }
 
-    $(search_array).append(array_shuffle(search_array_stims))
-    // store
-    stim_arrays.search = search_array;
+    $(mask_array).append(masks)
+    stim_arrays.mask = mask_array
 
 
+    // Generate search stimuli to be appended to search_array
+    search_fix = $(fixation).clone()
+    let lines = [search_fix]
+
+    if (trial_data.target_present === 'PRESENT') {
+      let target = $('<div />').addClass('container').append(
+            $('<div />').addClass('line').css('transform', `rotate(${trial_data.target_tilt}deg)`).css('border', '2px solid red')
+      )
+      lines.push(target)
+    }
 
 
+    while(lines.length < 25) {
+      let tilt = randomChoice(trial_data.distractor_tilts)
+      let line = $('<div />').addClass('container').append(
+          $('<div />').addClass('line').css('transform', `rotate(${tilt}deg)`)
+      )
 
+      lines.push(line)
+    }
+
+    $(search_array).append(array_shuffle(lines))
+    stim_arrays.search = search_array
 
   }
 
@@ -210,7 +200,7 @@ jsPsych.plugins["spatial-search"] = (function() {
     }
 
     stim_arrays = {
-      fix: null,
+      fixation: null,
       mask: null,
       search: null
     }
@@ -233,21 +223,30 @@ jsPsych.plugins["spatial-search"] = (function() {
 
     // Given it's easier to use line here, instead of fixation, is fixation really necessary to define?
     var preview = $('<div />').addClass('container')
-    preview.append($('<div />').addClass('line').css('transform', `rotate(${trial_data.target_fill}deg);`))
+    preview.append($('<div />').addClass('line').css('transform', `rotate(${trial_data.target_tilt}deg)`))
+
+    $(display_element).append(preview)
+
+    let pos = $(preview).offset()
+    let margin = 30;
+
+    let label = $('<div />').text('TARGET').css({
+      'position': 'fixed',
+      'top': `${pos.top - margin}px`,
+      'left': `${pos.left}px`
+    })
+
+    $(display_element).append(label)
 
     //$(preview).prepend(`TARGET`)
 
     // Immediate present target preview
-    $(display_element).append(preview)
 
     // Replace preview with fixation stim
     jsPsych.pluginAPI.setTimeout( function() {
       $(display_element).html('')
       $(display_element).append(stim_arrays.fixation)
     }, trial.preview_duration)
-
-
-    die()
 
     // Replace with first masking display
     jsPsych.pluginAPI.setTimeout( function() {

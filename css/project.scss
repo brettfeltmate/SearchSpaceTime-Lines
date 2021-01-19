@@ -1,7 +1,7 @@
 $grue: rgb(45,45,48);
 $whiteish: rgb(200,200,200);
 $one_dva: 100px;
-$border_width: 0.05 * $one_dva;
+$border_width: 0.02 * $one_dva;
 
 body {
   background-color: $grue;
@@ -23,20 +23,22 @@ body {
 
 .container {
   position: relative;
+  display:grid;
   width: 0.8 * $one_dva;
   height: 0.8 * $one_dva;
 }
 
 .line {
+  place-self: center;
   position: absolute;
   width: 0.8 * $one_dva;
-  border: 0.05 * $one_dva solid white;
-  background-color: white;
+  border: $border_width solid white;
   opacity: 1;
 }
 
 
 .fixation {
+  display: grid;
   grid-area: fixation;
   position: relative;
   width: 0.8 * $one_dva;
