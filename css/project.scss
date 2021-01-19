@@ -1,0 +1,48 @@
+$grue: rgb(45,45,48);
+$whiteish: rgb(200,200,200);
+$one_dva: 100px;
+$border_width: 0.05 * $one_dva;
+
+body {
+  background-color: $grue;
+  color: $whiteish;
+}
+
+.spatial_array {
+  display: grid;
+  place-items: center;
+  grid-template-columns: repeat(5, $one_dva);
+  grid-template-rows: repeat(5, $one_dva);
+  grid-template-areas:
+    "a b c d e"
+    "f g h i j"
+    "k l fixation m n"
+    "o p q w s"
+    "t u v w x";
+}
+
+.container {
+  position: relative;
+  width: 0.8 * $one_dva;
+  height: 0.8 * $one_dva;
+}
+
+.line {
+  position: absolute;
+  width: 0.8 * $one_dva;
+  border: 0.05 * $one_dva solid white;
+  background-color: white;
+  opacity: 1;
+}
+
+
+.fixation {
+  grid-area: fixation;
+  position: relative;
+  width: 0.8 * $one_dva;
+  height: 0.8 * $one_dva;
+}
+
+
+
+

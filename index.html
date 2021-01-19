@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script
+            src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous">
+    </script>
+    <script src = 'js/jspsych.js'></script>
+    <script src = 'js/plugins/spatial-search-trial.js'></script>
+    <script src = 'js/plugins/temporal-search-trial.js'></script>
+    <script src = 'js/plugins/jspsych-html-keyboard-response.js'></script>
+    <script src = 'js/plugins/jspsych-survey-text.js'></script>
+    <script src = 'js/plugins/jspsych-instructions.js'></script>
+    <script src = 'js/plugins/jspsych-fullscreen.js'></script>
+<!--    <script src = 'js/util/colourspaces.js'></script>-->
+    <script src = 'js/util/utilities.js'></script>
+    <script src = 'js/get-distractor-tilts.js'></script>
+    <script src = 'js/factorize.js'></script>
+<!--    <script src = '../lib/DVA_Manager.js'></script>-->
+<!--    <script src = '../lib/klect.js'></script>-->
+    <link rel="stylesheet" href="css/project.css">
+    <link rel="stylesheet" href="css/jspsych.css">
+</head>
+<body>
+<script>
+
+	// Init DVA manager
+	// let dva_mgr = new DVAManager();
+	// dva_mgr.one_dva = 100; // temporary, reassigned at run-time
+
+    var data_repo = [];
+
+    /*
+    * Construct practice & testing trials
+    * ... yes it's gross af but the things get done
+    *
+    * */
+
+    // Trial variables
+    let choices = array_shuffle(['f', 'j'])
+    var response_keys = choices
+
+    var TD_Similarity = array_shuffle(['HI', 'LO'])
+    var DD_Similarity = array_shuffle(['HI', 'LO'])
+
+    var set_size = [8, 12, 16]
+    var target_present = ['PRESENT', 'ABSENT']
+
+    // Only four practice blocks are run, two for each search domain, which two
+    // stimulus conditions are assigned to each is randomized.
+    let practice_conds = array_shuffle([['HI', 'LO'], ['HI', 'HI'], ['LO', 'HI'], ['LO', 'LO']])
+
+    let spatial_practice_factorized = []
+    let temporal_practice_factorized = []
+
+    while (practice_conds.length > 0) {
+    	space_cond = practice_conds.pop()
+    	spatial_practice_factorized.push(
+    		// factorize returns full factorial of variables provided (i.e., every possible trial type that could occur)
+            factorize(true, 'spatial-search', response_keys, set_size, target_present, space_cond[0], space_cond[1])
+        )
+        time_cond = practice_conds.pop()
+	    temporal_practice_factorized.push(
+		    factorize(true, 'temporal-search', response_keys, set_size, target_present, time_cond[0], time_cond[1])
+	    )
+    }
+
+    // Testing blocks, one for each stimulus conditions for each search domain
+
+    let spatial_testing_factorized = []
+    for (let i=0; i<TD_Similarity.length; i++) {
+    	for (let j=0; j<DD_Similarity.length; j++) {
+    		spatial_testing_factorized.push(
+			    factorize(false, 'spatial-search', response_keys, set_size, target_present, TD_Similarity[i], DD_Similarity[j])
+            )
+        }
+    }
+
+    // shuffle stimulus conditions, otherwise spatial and temporal search would follow the same sequence.
+    TD_Similarity = array_shuffle(TD_Similarity)
+    DD_Similarity = array_shuffle(DD_Similarity)
+
+    let temporal_testing_factorized = []
+    for (let i=0; i<TD_Similarity.length; i++) {
+	    for (let j=0; j<DD_Similarity.length; j++) {
+		    temporal_testing_factorized.push(
+			    factorize(false, 'temporal-search', response_keys, set_size, target_present, TD_Similarity[i], DD_Similarity[j])
+		    )
+	    }
+    }
+
+
+    // Abstract 'trial' populated by values selected from factorials
+    var trial = {
+    	practice: jsPsych.timelineVariable('practice'),
+    	type: jsPsych.timelineVariable('type'),
+        choices: jsPsych.timelineVariable('choices'),
+        target_tilt: jsPsych.timelineVariable('target_tilt'),
+        set_size: jsPsych.timelineVariable('set_size'),
+        target_present: jsPsych.timelineVariable('target_present'),
+        TD_cond: jsPsych.timelineVariable('TD_cond'),
+        DD_cond: jsPsych.timelineVariable('DD_cond'),
+        distractor_tilts: jsPsych.timelineVariable('distractor_tilts')
+    }
+
+    // Spawns trial sequence using provided factor list and desired # of repetitions
+    let trial_sequence = function(factored_list, reps, randomize=true) {
+    	block = {
+            timeline: [trial],
+            timeline_variables: factored_list,
+            repetitions: reps,
+            randomize_order: randomize
+        }
+        return block
+    }
+
+    // Spawn and store temporal blocks
+    var temporal_blocks = []
+
+    // Randomize order of stimulus conditions
+    temporal_practice_factorized = array_shuffle(temporal_practice_factorized)
+    for (let i=0; i<temporal_practice_factorized.length; i++) {
+    	temporal_blocks.push(trial_sequence(temporal_practice_factorized[i], 1)) // 1 seq = 8 trials, results in 24 trial sequence for each practice block
+    }
+
+
+    temporal_testing_factorized = array_shuffle(temporal_testing_factorized)
+    for (let i=0; i<temporal_testing_factorized.length; i++) {
+	    temporal_blocks.push(trial_sequence(temporal_testing_factorized[i], 1)) // 72 trials per block
+    }
+
+    // spatial blocks
+    var spatial_blocks = []
+
+    spatial_practice_factorized = array_shuffle(spatial_practice_factorized)
+    for (let i=0; i<spatial_practice_factorized.length; i++) {
+	    spatial_blocks.push(trial_sequence(spatial_practice_factorized[i], 1)) // 1 seq = 24 trials per practice block
+    }
+
+
+    spatial_testing_factorized = array_shuffle(spatial_testing_factorized)
+    for (let i=0; i<spatial_testing_factorized.length; i++) {
+	    spatial_blocks.push(trial_sequence(spatial_testing_factorized[i], 1)) // 72 trials per block
+    }
+
+    /*
+    *
+    * Now, create interstitial events (welcome screen, instructions, block breaks, etc.,
+    *
+    * */
+
+    // instructions
+    let general_instrux = [
+    	'<p>In this experiment, you will see a series of items</p><br>' +
+        '<p>Amongst these items a target item may, or may not, be present</p><br>',
+        '<p>If one of these items is the target, press</p>' +
+            '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[0]) +
+        '<p>If none of the items is the target, press</p>' +
+            '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[1]),
+        '<p>Please try to respond as QUICKLY and as ACCURATELY as possible. You will be told whether you were correct, or not, after each response</p>',
+        '<p>Each trial will begin with a preview of the target you are looking for, and practice blocks will be provided to familiarize yourself with the task.</p>'
+    ]
+
+    let spatial_instrux = [
+    	'<p>Searching in Space!</p>',
+        '<p>In this task you will see a collection of coloured items randomly arranged around the screen</p>',
+	    '<p>If one of these items is the target, press</p>' +
+	    '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[0]) +
+	    '<p>If none of the items is the target, press</p>' +
+	    '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[1])
+    ]
+
+    let temporal_instrux = [
+    	'<p>Searching in Time!</p>',
+        '<p>In this task you will see a rapid series of coloured items presented one at at time, center screen.</p>',
+	    '<p>If one of these items is the target, press</p>' +
+	    '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[0]) +
+	    '<p>Once the stream ends, if none of the items were the target, press</p>' +
+	    '<p style="font-size: 30pt;"> {0} </p>'.format(response_keys[1])
+    ]
+
+    let general_instructions = {
+    	type: 'instructions',
+        pages: general_instrux,
+    }
+
+    let spatial_instrucitons = {
+    	type: 'instructions',
+        pages: spatial_instrux,
+    }
+
+    let temporal_instructions = {
+    	type: 'instructions',
+        pages: temporal_instrux,
+    }
+
+    let break_period = {
+    	type: 'html-keyboard-response',
+        stimulus: 'Rest period. Press any key when you are ready to continue.'
+    }
+
+    let enter_fullscreen = {
+    	type: 'fullscreen',
+        fullscreen_mode: true
+    }
+
+    let exit_fullscreen = {
+    	type: 'fullscreen',
+        fullscreen_mode: false
+    }
+
+    let get_demographics = {
+    	type: 'survey-text',
+        questions: [
+            {name: 'age', prompt: "What is your age?"},
+            {name: 'handedness', prompt: "Are you right-handed, left, or ambidextrous?"},
+            {name: 'sex', prompt: "What is your sex?"}
+        ],
+	    // on_finish: function() {
+		//     age = get_demographic('age');
+		//     handedness = get_demographic('handedness')
+		//     sex = get_demographic('sex');
+	    // }
+    }
+
+    //let final_timeline = [enter_fullscreen, get_demographics, general_instructions]
+    let final_timeline = []
+
+
+    // let first_task = randomChoice(['SPATIAL', 'TEMPORAL'])
+
+    let first_task = 'SPATIAL'
+
+    if (first_task === 'SPATIAL') {
+    	final_timeline.push(spatial_instrucitons)
+        for (let i=0; i<spatial_blocks.length; i++) {
+        	final_timeline.push(spatial_blocks[i])
+            final_timeline.push(break_period)
+        }
+        final_timeline.push(temporal_instructions)
+        for (let i=0; i<temporal_blocks.length; i++) {
+	        final_timeline.push(temporal_blocks[i])
+	        final_timeline.push(break_period)
+        }
+    }
+    else {
+	    final_timeline.push(temporal_instructions)
+	    for (let i=0; i<temporal_blocks.length; i++) {
+		    final_timeline.push(temporal_blocks[i])
+		    final_timeline.push(break_period)
+	    }
+	    final_timeline.push(spatial_instrucitons)
+	    for (let i=0; i<spatial_blocks.length; i++) {
+		    final_timeline.push(spatial_blocks[i])
+		    final_timeline.push(break_period)
+	    }
+    }
+
+    final_timeline.push(exit_fullscreen)
+
+
+	jsPsych.init({
+			show_progress_bar: false,
+			timeline: final_timeline,
+			default_iti: 3000,
+			on_finish: function() {
+				// pid = jsPsych.randomization.randomID(5);
+				// jsPsych.data.addProperties({
+				//     pid: pid,
+				//     age: age,
+				//     sex: sex,
+				//     handedness: handedness
+				// })
+				// KLect.send('klein', 'DISP', 'SearchSpaceTime-Lines', 'brett.feltmate@dal.ca')
+
+				jsPsych.data.displayData()
+			}
+		}
+	)
+
+    // dva_mgr.launch = function() {
+	//     jsPsych.init({
+	// 		    show_progress_bar: false,
+	// 		    timeline: final_timeline,
+	// 		    default_iti: 3000,
+	// 		    on_finish: function() {
+	// 		    	// pid = jsPsych.randomization.randomID(5);
+	// 		    	// jsPsych.data.addProperties({
+    //                 //     pid: pid,
+    //                 //     age: age,
+    //                 //     sex: sex,
+    //                 //     handedness: handedness
+    //                 // })
+	// 		    	// KLect.send('klein', 'DISP', 'SearchSpaceTime-Lines', 'brett.feltmate@dal.ca')
+    //
+    //                 jsPsych.data.displayData()
+	// 		    }
+	// 	    }
+	//     )
+    // }
+    //
+    // dva_mgr.init(skip_c);
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
